@@ -23,24 +23,7 @@ namespace Jam
 		ScreenOutput = 1 << 11,
 		RemoveEmptyDirs = 1 << 12
 	}
-
-	public class InteropHelper
-	{
-		static InteropHelper()
-		{
-			InteropHelper.Enabled = InteropHelper.GetHasInterop();
-		}
-
-		public static bool Enabled { get; set; }
-
-		private static bool GetHasInterop()
-		{
-#if EMBEDDED_MODE
-			return true;
-#else
-			return false;
-#endif
-		}
+		
 
 #if EMBEDDED_MODE
 	public class Interop
@@ -60,8 +43,29 @@ namespace Jam
 		public static extern string[] GetVar(string name);
 
 		[MethodImplAttribute(MethodImplOptions.InternalCall)]
-		public static extern void Setting(string name, string[] targets, string[] values);
+		public static extern void SetSetting(string name, string[] targets, string[] values);
+
+		[MethodImplAttribute(MethodImplOptions.InternalCall)]
+		public static extern string[] GetSetting(string name, string targets);
+
+		[MethodImplAttribute(MethodImplOptions.InternalCall)]
+		private static extern string[] RegisterRuleInternal(string name, Object includeFunction);
+
+		[MethodImplAttribute(MethodImplOptions.InternalCall)]
+		public static extern void PushSettings(string targetName);
+
+		[MethodImplAttribute(MethodImplOptions.InternalCall)]
+		public static extern void PopSettings(string targetName);
+
+		public static string[] RegisterInclude(string name, Func<string[][],string[]> includeFunction)
+		{
+			return RegisterRuleInternal (name, includeFunction);
+		}
+
+		public static string[] RegisterRule(string name, Func<string[][],string[]> includeFunction)
+		{
+			return RegisterRuleInternal (name, includeFunction);
+		}
 	}
 #endif
-	}
 }
