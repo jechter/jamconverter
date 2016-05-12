@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Text;
+using System.Collections.Generic;
 using System.Reflection;
 
 public static class BuiltinFunctions
@@ -45,7 +46,9 @@ public static class BuiltinFunctions
 	{
 #if EMBEDDED_MODE
 		GlobalVariables.Singleton.SendVariablesToJam ();
-		return new JamList(Jam.Interop.InvokeRule(rulename, JamListArrayToLOL(values)));
+		var result = new JamList(Jam.Interop.InvokeRule(rulename, JamListArrayToLOL(values)));
+		GlobalVariables.Singleton.LoadVariablesFromJam ();
+		return result;
 #else
 		throw new NotImplementedException();
 #endif
@@ -60,6 +63,7 @@ public static class BuiltinFunctions
 #endif
 	}
 
+	static List<System.Func<string[][], string[]>> nogc = new List<System.Func<string[][], string[]>> ();
 	public static void RegisterRule(string rulename, MethodInfo callback)
 	{
 		System.Func<string[][], string[]> d = jamLists => 
@@ -70,10 +74,12 @@ public static class BuiltinFunctions
 				targetArguments[i] = jamLists.Length > i ? new JamList(jamLists[i]) : new JamList();
 			}
 			object result = callback.Invoke(null,targetArguments);
+			GlobalVariables.Singleton.SendVariablesToJam ();
 			if (result == null)
 				return new string[0];
 			return ((JamList)result).Elements.ToArray();
 		};
+		nogc.Add (d);
 		#if EMBEDDED_MODE
 		Jam.Interop.RegisterRule(rulename, d);
 		#endif

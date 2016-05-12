@@ -8,6 +8,7 @@ public class GlobalVariables
 	private readonly Variables _values = new Variables();
 
 	private Variables _currentOnContext;
+	private string _currentOnContextName;
 	private Dictionary<string, Variables> _onTargetVariables = new Dictionary<string, Variables>();
 
 	public static GlobalVariables Singleton = null;
@@ -35,9 +36,26 @@ public class GlobalVariables
 	        }
 
 	        {
-				JamList result;
+				JamList result = null;
 #if EMBEDDED_MODE
-				result = new JamList (Jam.Interop.GetVar (variableName));
+				if (_currentOnContext != null)
+				{
+					var l = Jam.Interop.GetSetting (variableName, _currentOnContextName);
+					if (l != null)
+					{
+						result = new JamList(l);
+						_currentOnContext [variableName] = result;
+						return result;
+					}
+				}
+
+				{
+					var l = Jam.Interop.GetVar (variableName);
+					if (l != null)
+						result = new JamList (l);
+					else
+						result = new JamList ();
+				}
 #else
 				result = new JamList ();
 #endif
@@ -84,7 +102,12 @@ public class GlobalVariables
 					continue;
 				}
 
+				#if EMBEDDED_MODE
+				var l = Jam.Interop.GetSetting (variable, targetName);
+				var r = new JamList(l);
+				#else
 				var r = new JamList();
+				#endif
 				variables[variable] = r;
 				yield return r;
 			}
@@ -100,6 +123,12 @@ public class GlobalVariables
 			throw new ArgumentException("on statement being invoked on multiple targets. you couldn't even do this in jam!");
 
 		_onTargetVariables.TryGetValue(targetName.Elements.Single(), out _currentOnContext);
+		if (_currentOnContext == null) 
+		{
+			_currentOnContext = new Variables ();
+			_onTargetVariables [targetName.Elements.Single ()] = _currentOnContext;
+		}
+		_currentOnContextName = targetName.Elements.Single();
 		return new TemporaryTargetContext(this);
 	}
 
@@ -135,9 +164,26 @@ public class GlobalVariables
 		{
 			foreach (var targetVar in targetVars.Value)
 			{
-				Jam.Interop.Setting (targetVar.Key, new[]{ targetVars.Key }, targetVar.Value.Elements.ToArray ());
+				Jam.Interop.SetSetting (targetVar.Key, new[]{ targetVars.Key }, targetVar.Value.Elements.ToArray ());
 			}
 		}
+		foreach (var targetVar in _values)
+			Jam.Interop.SetVar (targetVar.Key, targetVar.Value.Elements.ToArray ());
+#endif
+	}
+
+	public void LoadVariablesFromJam()
+	{
+#if EMBEDDED_MODE
+		foreach (var targetVars in _onTargetVariables) 
+		{
+			foreach (var targetVar in targetVars.Value)
+			{
+				targetVar.Value.Assign(new JamList(Jam.Interop.GetSetting (targetVar.Key, targetVars.Key)));
+			}
+		}
+		foreach (var targetVar in _values)
+			targetVar.Value.Assign(new JamList(Jam.Interop.GetVar (targetVar.Key)));
 #endif
 	}
 }
