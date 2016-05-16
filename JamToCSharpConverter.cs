@@ -117,16 +117,23 @@ namespace jamconverter
 					.Prepend (new NRefactory.SimpleType ("BuiltinFunctions"))
 					.Select (st => new NRefactory.TypeOfExpression (st));
 
-			var filesRegistration =
-				new NRefactory.ExpressionStatement(
-					new NRefactory.InvocationExpression(
-						new NRefactory.MemberReferenceExpression(
-							new NRefactory.IdentifierExpression("BuiltinFunctions"),
-							"RegisterJamFiles"),
-						_filesToTopLevel.Keys.Select(file => new NRefactory.PrimitiveExpression(file.FileName))
-					)
-				);
-			mainMethod.Body.Statements.Add(filesRegistration);
+			foreach (var file in _filesToTopLevel.Keys) 
+			{
+				var filesRegistration =
+					new NRefactory.ExpressionStatement(
+						new NRefactory.InvocationExpression(
+							new NRefactory.MemberReferenceExpression(
+								new NRefactory.IdentifierExpression("BuiltinFunctions"),
+								"RegisterJamFiles"),
+							new NRefactory.Expression[] 
+							{
+								new NRefactory.PrimitiveExpression(file.FileName),
+								new NRefactory.IdentifierExpression(ConverterLogic.ClassNameForJamFile(file.FileName)+".TopLevel")
+							}
+						)
+					);
+				mainMethod.Body.Statements.Add(filesRegistration);
+			}
 
 		    var objectCreateExpression = new NRefactory.ObjectCreateExpression(new NRefactory.SimpleType(nameof(DynamicRuleInvocationService)), types);
 		    var assignment =

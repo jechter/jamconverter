@@ -6,10 +6,16 @@ using System.Reflection;
 
 public static class BuiltinFunctions
 {
-	public static void RegisterJamFiles(params string[] paths)
+	public static void RegisterJamFiles(string paths, Action topLevel)
 	{
 #if EMBEDDED_MODE
-		// Nothing to do.
+		System.Func<string[][], string[]> d = jamLists => 
+		{
+			topLevel();
+			return null;
+		};
+		nogc.Add (d);
+		Jam.Interop.RegisterInclude(paths, d);
 #else
 		////TODO
 #endif

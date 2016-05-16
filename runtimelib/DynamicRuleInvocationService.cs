@@ -49,8 +49,12 @@ namespace runtimelib
 		{
 			foreach (var fileName in value.Elements)
 			{
+				#if EMBEDDED_MODE
+				Jam.Interop.Include(fileName);
+				#else
 				var type = _types.Single(t => t.Name == ConverterLogic.ClassNameForJamFile(fileName));
 				type.GetMethod("TopLevel").Invoke(null, null);
+				#endif
 			}
 		}
 

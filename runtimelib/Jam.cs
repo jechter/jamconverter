@@ -52,10 +52,7 @@ namespace Jam
 		private static extern string[] RegisterRuleInternal(string name, Object includeFunction);
 
 		[MethodImplAttribute(MethodImplOptions.InternalCall)]
-		public static extern void PushSettings(string targetName);
-
-		[MethodImplAttribute(MethodImplOptions.InternalCall)]
-		public static extern void PopSettings(string targetName);
+		public static extern void Include(string file);
 
 		public static string[] RegisterInclude(string name, Func<string[][],string[]> includeFunction)
 		{
